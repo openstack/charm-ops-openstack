@@ -44,6 +44,7 @@ class OSBaseCharm(CharmBase):
                 self.framework.model.config.get('key'))
         apt_update(fatal=True)
         apt_install(self.PACKAGES, fatal=True)
+        self.update_status()
 
     def update_status(self):
         logging.info("Updating status")
