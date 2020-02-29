@@ -10,6 +10,7 @@ from charmhelpers.fetch import (
 )
 from ops.model import (
     ActiveStatus,
+    BlockedStatus,
     MaintenanceStatus,
     WaitingStatus,
 )
@@ -23,6 +24,8 @@ class OSBaseCharm(CharmBase):
     PACKAGES = []
 
     RESTART_MAP = {}
+
+    REQUIRED_RELATIONS = []
 
     def __init__(self, framework, key):
         super().__init__(framework, key)
@@ -47,6 +50,14 @@ class OSBaseCharm(CharmBase):
         if self.state.is_paused:
             self.model.unit.status = MaintenanceStatus(
                 "Paused. Use 'resume' action to resume normal service.")
+        missing_relations = []
+        for relation in self.REQUIRED_RELATIONS:
+            if not self.framework.model.get_relation(relation):
+               missing_relations.append(relation)
+        if missing_relations:
+            self.model.unit.status = BlockedStatus(
+                'Missing relations: {}'.format(', '.join(missing_relations)))
+            return
         if self.state.is_started:
             self.model.unit.status = ActiveStatus('Unit is ready')
         else:
