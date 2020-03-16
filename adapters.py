@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from ops.framework import Object
 
 
+# Adapted from charms_openstack.adapters
 class OpenStackOperRelationAdapter(object):
     """
     Base adapter class for all OpenStack related adapters.
@@ -72,6 +73,7 @@ class OpenStackOperRelationAdapter(object):
                             self.relation, name)))(name))
 
 
+# Adapted from charms_openstack.adapters
 class ConfigurationAdapter(object):
     """
     Configuration Adapter which provides python based access
@@ -97,6 +99,7 @@ class ConfigurationAdapter(object):
             setattr(self, k, v)
 
 
+# Adapted from charms_openstack.adapters
 class OpenStackRelationAdapters(Object):
     """
     Base adapters class for OpenStack Charms, used to aggregate
