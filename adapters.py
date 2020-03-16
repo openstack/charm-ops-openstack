@@ -140,7 +140,8 @@ class OpenStackRelationAdapters(Object):
                 {k.replace('-', '_'): v
                  for k, v in getattr(cls, 'relation_adapters', {}).items()})
         self.add_relations(relations)
-        setattr(self, 'options', ConfigurationAdapter(charm_instance))
+        self.options = ConfigurationAdapter(charm_instance)
+        self._relations.add('options')
 
     def __iter__(self):
         """
