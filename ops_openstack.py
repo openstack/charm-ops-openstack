@@ -17,7 +17,6 @@ from ops.model import (
 )
 import charmhelpers.contrib.openstack.utils as os_utils
 import logging
-import copy
 
 # Stolen from charms.ceph
 UCA_CODENAME_MAP = {
@@ -39,6 +38,7 @@ UCA_CODENAME_MAP = {
 
 _releases = {}
 logger = logging.getLogger()
+
 
 class OSBaseCharm(CharmBase):
     state = StoredState()
@@ -76,7 +76,7 @@ class OSBaseCharm(CharmBase):
         missing_relations = []
         for relation in self.REQUIRED_RELATIONS:
             if not self.framework.model.get_relation(relation):
-               missing_relations.append(relation)
+                missing_relations.append(relation)
         if missing_relations:
             self.model.unit.status = BlockedStatus(
                 'Missing relations: {}'.format(', '.join(missing_relations)))
@@ -114,7 +114,8 @@ class OSBaseCharm(CharmBase):
 
 
 def charm_class(cls):
-    _releases[cls.release] =  {'deb': cls}
+    _releases[cls.release] = {'deb': cls}
+
 
 # Adapted from charms_openstack.charm.core
 def get_charm_class(release=None, package_type='deb', all_releases=None,
@@ -166,6 +167,7 @@ def get_charm_class(release=None, package_type='deb', all_releases=None,
         raise RuntimeError("Release {} is not supported".format(release))
     return cls
 
+
 # Adapted from charms_openstack.charm.core
 def get_charm_instance(release=None, package_type='deb', all_releases=None,
                        *args, **kwargs):
@@ -174,6 +176,7 @@ def get_charm_instance(release=None, package_type='deb', all_releases=None,
         package_type=package_type,
         all_releases=all_releases,
         *args, **kwargs)(release=release, *args, **kwargs)
+
 
 def get_charm_class_for_release():
     _origin = None
@@ -185,8 +188,9 @@ def get_charm_class_for_release():
         _origin = config['openstack-origin']
     else:
         _origin = 'distro'
-    target_releae = os_utils.get_os_codename_install_source(_origin)
+    # XXX Make this support openstack and ceph
+    target_release = os_utils.get_os_codename_install_source(_origin)
     # Check for a cepch charm match first:
-    ceph_release = UCA_CODENAME_MAP[target_releae]
+    ceph_release = UCA_CODENAME_MAP[target_release]
     releases = sorted(list(set(UCA_CODENAME_MAP.values())))
     return get_charm_class(release=ceph_release, all_releases=releases)
