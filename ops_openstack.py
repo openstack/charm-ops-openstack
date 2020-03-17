@@ -53,10 +53,13 @@ class OSBaseCharm(CharmBase):
         super().__init__(framework, key)
         self.state.set_default(is_started=False)
         self.state.set_default(is_paused=False)
+        self.state.set_default(series_upgrade=False)
         self.framework.observe(self.on.install, self)
         self.framework.observe(self.on.update_status, self)
         self.framework.observe(self.on.pause_action, self)
         self.framework.observe(self.on.resume_action, self)
+        self.framework.observe(self.on.pre_series_upgrade, self)
+        self.framework.observe(self.on.post_series_upgrade, self)
 
     def on_install(self, event):
         logging.info("Installing packages")
@@ -70,6 +73,11 @@ class OSBaseCharm(CharmBase):
 
     def update_status(self):
         logging.info("Updating status")
+        if self.state.series_upgrade:
+            self.model.unit.status = BlockedStatus(
+                'Ready for do-release-upgrade and reboot. '
+                'Set complete when finished.')
+            return
         if self.state.is_paused:
             self.model.unit.status = MaintenanceStatus(
                 "Paused. Use 'resume' action to resume normal service.")
@@ -95,6 +103,24 @@ class OSBaseCharm(CharmBase):
         for svc in self.RESTART_MAP.values():
             _svcs.extend(svc)
         return list(set(_svcs))
+
+    def on_pre_series_upgrade(self, event):
+        _, messages = os_utils.manage_payload_services(
+            'pause',
+            services=self.services(),
+            charm_func=None)
+        self.state.is_paused = True
+        self.state.series_upgrade = True
+        self.update_status()
+
+    def on_post_series_upgrade(self, event):
+        _, messages = os_utils.manage_payload_services(
+            'resume',
+            services=self.services(),
+            charm_func=None)
+        self.state.is_paused = False
+        self.state.series_upgrade = False
+        self.update_status()
 
     def on_pause_action(self, event):
         _, messages = os_utils.manage_payload_services(
