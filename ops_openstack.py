@@ -37,7 +37,7 @@ UCA_CODENAME_MAP = {
 
 
 _releases = {}
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class OSBaseCharm(CharmBase):
@@ -63,10 +63,10 @@ class OSBaseCharm(CharmBase):
 
     def on_install(self, event):
         logging.info("Installing packages")
-        if self.framework.model.config.get('source'):
+        if self.model.config.get('source'):
             add_source(
-                self.framework.model.config['source'],
-                self.framework.model.config.get('key'))
+                self.model.config['source'],
+                self.model.config.get('key'))
         apt_update(fatal=True)
         apt_install(self.PACKAGES, fatal=True)
         self.update_status()
@@ -74,25 +74,25 @@ class OSBaseCharm(CharmBase):
     def update_status(self):
         logging.info("Updating status")
         if self.state.series_upgrade:
-            self.model.unit.status = BlockedStatus(
+            self.unit.status = BlockedStatus(
                 'Ready for do-release-upgrade and reboot. '
                 'Set complete when finished.')
             return
         if self.state.is_paused:
-            self.model.unit.status = MaintenanceStatus(
+            self.unit.status = MaintenanceStatus(
                 "Paused. Use 'resume' action to resume normal service.")
         missing_relations = []
         for relation in self.REQUIRED_RELATIONS:
-            if not self.framework.model.get_relation(relation):
+            if not self.model.get_relation(relation):
                 missing_relations.append(relation)
         if missing_relations:
-            self.model.unit.status = BlockedStatus(
+            self.unit.status = BlockedStatus(
                 'Missing relations: {}'.format(', '.join(missing_relations)))
             return
         if self.state.is_started:
-            self.model.unit.status = ActiveStatus('Unit is ready')
+            self.unit.status = ActiveStatus('Unit is ready')
         else:
-            self.model.unit.status = WaitingStatus('Not ready for reasons')
+            self.unit.status = WaitingStatus('Not ready for reasons')
         logging.info("Status updated")
 
     def on_update_status(self, event):
