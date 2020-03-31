@@ -81,6 +81,7 @@ class OSBaseCharm(CharmBase):
         if self.state.is_paused:
             self.unit.status = MaintenanceStatus(
                 "Paused. Use 'resume' action to resume normal service.")
+            return
         missing_relations = []
         for relation in self.REQUIRED_RELATIONS:
             if not self.model.get_relation(relation):
