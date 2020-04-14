@@ -71,6 +71,9 @@ class OSBaseCharm(CharmBase):
         apt_install(self.PACKAGES, fatal=True)
         self.update_status()
 
+    def custom_status_check(self):
+        raise NotImplementedError
+
     def update_status(self):
         logging.info("Updating status")
         if self.state.series_upgrade:
@@ -90,6 +93,13 @@ class OSBaseCharm(CharmBase):
             self.unit.status = BlockedStatus(
                 'Missing relations: {}'.format(', '.join(missing_relations)))
             return
+        try:
+            # Custom checks return True if the checked passed else False.
+            # If the check failed the custom check will have set the status.
+            if not self.custom_status_check():
+                return
+        except  NotImplementedError:
+            pass
         if self.state.is_started:
             self.unit.status = ActiveStatus('Unit is ready')
         else:
