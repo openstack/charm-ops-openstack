@@ -103,7 +103,7 @@ class OSBaseCharm(CharmBase):
         if self.state.is_started:
             self.unit.status = ActiveStatus('Unit is ready')
         else:
-            self.unit.status = WaitingStatus('Not ready for reasons')
+            self.unit.status = WaitingStatus('Charm configuration in progress')
         logging.info("Status updated")
 
     def on_update_status(self, event):
