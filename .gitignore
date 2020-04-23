@@ -1,1 +1,4 @@
 .tox
+.stestr/
+__pycache__
+
