@@ -87,7 +87,8 @@ class OSBaseCharm(CharmBase):
             return
         missing_relations = []
         for relation in self.REQUIRED_RELATIONS:
-            if not self.model.get_relation(relation):
+            rel = self.model.get_relation(relation)
+            if rel is None:
                 missing_relations.append(relation)
         if missing_relations:
             self.unit.status = BlockedStatus(
@@ -98,7 +99,7 @@ class OSBaseCharm(CharmBase):
             # If the check failed the custom check will have set the status.
             if not self.custom_status_check():
                 return
-        except  NotImplementedError:
+        except NotImplementedError:
             pass
         if self.state.is_started:
             self.unit.status = ActiveStatus('Unit is ready')
@@ -113,7 +114,7 @@ class OSBaseCharm(CharmBase):
         _svcs = []
         for svc in self.RESTART_MAP.values():
             _svcs.extend(svc)
-        return list(set(_svcs))
+        return sorted(list(set(_svcs)))
 
     def on_pre_series_upgrade(self, event):
         _, messages = os_utils.manage_payload_services(
