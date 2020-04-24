@@ -18,13 +18,14 @@ import unittest
 
 from mock import patch, MagicMock
 
-from ops.testing import Harness
+from ops.testing import Harness, _TestingModelBackend
 from ops.model import (
     ActiveStatus,
     BlockedStatus,
     MaintenanceStatus,
     WaitingStatus,
 )
+from ops import framework, model
 
 import ops_openstack
 
@@ -50,7 +51,7 @@ class OpenStackTestAPICharm(ops_openstack.OSBaseCharm):
 class CharmTestCase(unittest.TestCase):
 
     def setUp(self, obj, patches):
-        super(CharmTestCase, self).setUp()
+        super().setUp()
         self.patches = patches
         self.obj = obj
         self.patch_all()
@@ -75,12 +76,15 @@ class TestOSBaseCharm(CharmTestCase):
         'os_utils']
 
     def setUp(self):
-        super(TestOSBaseCharm, self).setUp(ops_openstack, self.PATCHES)
+        super().setUp(ops_openstack, self.PATCHES)
         self.os_utils.manage_payload_services = MagicMock()
         self.harness = Harness(
             OpenStackTestAPICharm,
             meta='''
                 name: client
+                requires:
+                  shared-db:
+                    interface: mysql-shared
                 provides:
                   ceph-client:
                     interface: ceph-client
@@ -91,38 +95,35 @@ class TestOSBaseCharm(CharmTestCase):
                 resume:
                     description: resume action
             ''')
+        # BEGIN: Workaround until
+        # https://github.com/canonical/operator/pull/196 lands
+        class _TestingOPSModelBackend(_TestingModelBackend):
+
+            def relation_ids(self, relation_name):
+                return self._relation_ids_map.get(relation_name, [])
+        self.harness._backend = _TestingOPSModelBackend(
+            self.harness._unit_name)
+        self.harness._model = model.Model(
+            self.harness._unit_name,
+            self.harness._meta,
+            self.harness._backend)
+        self.harness._framework = framework.Framework(
+            ":memory:",
+            self.harness._charm_dir,
+            self.harness._meta,
+            self.harness._model)
+        # END Workaround
 
     def test_init(self):
         self.harness.begin()
         self.assertFalse(self.harness.charm.state.is_started)
         self.assertFalse(self.harness.charm.state.is_paused)
         self.assertFalse(self.harness.charm.state.series_upgrade)
-        events = list(self.harness.charm.on.events())
-        self.assertEqual(
-            sorted(events),
-            [
-                'ceph_client_relation_broken',
-                'ceph_client_relation_changed',
-                'ceph_client_relation_departed',
-                'ceph_client_relation_joined',
-                'collect_metrics',
-                'config_changed',
-                'install',
-                'leader_elected',
-                'leader_settings_changed',
-                'pause_action',
-                'post_series_upgrade',
-                'pre_series_upgrade',
-                'remove',
-                'resume_action',
-                'start',
-                'stop',
-                'update_status',
-                'upgrade_charm'])
 
     def test_install(self):
+        print(self.harness._backend)
         self.harness.begin()
-        self.harness.charm.on_install('An Event')
+        self.harness.charm.on.install.emit()
         self.assertFalse(self.add_source.called)
         self.apt_update.assert_called_once_with(fatal=True)
         self.apt_install.assert_called_once_with(
@@ -135,7 +136,7 @@ class TestOSBaseCharm(CharmTestCase):
                 'source': 'cloud:myppa',
                 'key': 'akey'})
         self.harness.begin()
-        self.harness.charm.on_install('An Event')
+        self.harness.charm.on.install.emit()
         self.add_source.assert_called_once_with('cloud:myppa', 'akey')
         self.apt_update.assert_called_once_with(fatal=True)
         self.apt_install.assert_called_once_with(
@@ -146,7 +147,7 @@ class TestOSBaseCharm(CharmTestCase):
         self.harness.add_relation('shared-db', 'mysql')
         self.harness.begin()
         self.harness.charm.state.is_started = True
-        self.harness.charm.on_update_status('An Event')
+        self.harness.charm.on.update_status.emit()
         self.assertEqual(
             self.harness.charm.unit.status.message,
             'Unit is ready')
@@ -161,7 +162,7 @@ class TestOSBaseCharm(CharmTestCase):
         self.harness.add_relation('shared-db', 'mysql')
         self.harness.begin()
         self.harness.charm.state.is_started = True
-        self.harness.charm.on_update_status('An Event')
+        self.harness.charm.on.update_status.emit()
         self.assertEqual(
             self.harness.charm.unit.status.message,
             'Custom check failed')
@@ -172,7 +173,7 @@ class TestOSBaseCharm(CharmTestCase):
     def test_update_status_not_started(self):
         self.harness.add_relation('shared-db', 'mysql')
         self.harness.begin()
-        self.harness.charm.on_update_status('An Event')
+        self.harness.charm.on.update_status.emit()
         self.assertEqual(
             self.harness.charm.unit.status.message,
             'Charm configuration in progress')
@@ -195,7 +196,7 @@ class TestOSBaseCharm(CharmTestCase):
     def test_update_status_series_paused(self):
         self.harness.begin()
         self.harness.charm.state.is_paused = True
-        self.harness.charm.on_update_status('An Event')
+        self.harness.charm.on.update_status.emit()
         self.assertEqual(
             self.harness.charm.unit.status.message,
             "Paused. Use 'resume' action to resume normal service.")
@@ -205,7 +206,7 @@ class TestOSBaseCharm(CharmTestCase):
 
     def test_update_status_missing_relation(self):
         self.harness.begin()
-        self.harness.charm.on_update_status('An Event')
+        self.harness.charm.on.update_status.emit()
         self.assertEqual(
             self.harness.charm.unit.status.message,
             'Missing relations: shared-db')
@@ -224,7 +225,7 @@ class TestOSBaseCharm(CharmTestCase):
         self.harness.begin()
         self.assertFalse(self.harness.charm.state.series_upgrade)
         self.assertFalse(self.harness.charm.state.is_paused)
-        self.harness.charm.on_pre_series_upgrade('An Event')
+        self.harness.charm.on.pre_series_upgrade.emit()
         self.assertTrue(self.harness.charm.state.series_upgrade)
         self.assertTrue(self.harness.charm.state.is_paused)
         self.os_utils.manage_payload_services.assert_called_once_with(
@@ -237,7 +238,7 @@ class TestOSBaseCharm(CharmTestCase):
         self.harness.begin()
         self.harness.charm.state.series_upgrade = True
         self.harness.charm.state.is_paused = True
-        self.harness.charm.on_post_series_upgrade('An Event')
+        self.harness.charm.on.post_series_upgrade.emit()
         self.assertFalse(self.harness.charm.state.series_upgrade)
         self.assertFalse(self.harness.charm.state.is_paused)
         self.os_utils.manage_payload_services.assert_called_once_with(

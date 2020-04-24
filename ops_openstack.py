@@ -87,9 +87,8 @@ class OSBaseCharm(CharmBase):
             return
         missing_relations = []
         for relation in self.REQUIRED_RELATIONS:
-            try:
-                self.model.get_relation(relation)
-            except KeyError:
+            rel = self.model.get_relation(relation)
+            if rel is None:
                 missing_relations.append(relation)
         if missing_relations:
             self.unit.status = BlockedStatus(
