@@ -61,7 +61,7 @@ class OSBaseCharm(CharmBase):
         self.framework.observe(self.on.pre_series_upgrade, self)
         self.framework.observe(self.on.post_series_upgrade, self)
 
-    def on_install(self, event):
+    def install_pkgs(self):
         logging.info("Installing packages")
         if self.model.config.get('source'):
             add_source(
@@ -71,11 +71,21 @@ class OSBaseCharm(CharmBase):
         apt_install(self.PACKAGES, fatal=True)
         self.update_status()
 
+    def on_install(self, event):
+        self.install_pkgs()
+
     def custom_status_check(self):
         raise NotImplementedError
 
     def update_status(self):
         logging.info("Updating status")
+        try:
+            # Custom checks return True if the checked passed else False.
+            # If the check failed the custom check will have set the status.
+            if not self.custom_status_check():
+                return
+        except NotImplementedError:
+            pass
         if self.state.series_upgrade:
             self.unit.status = BlockedStatus(
                 'Ready for do-release-upgrade and reboot. '
@@ -87,20 +97,12 @@ class OSBaseCharm(CharmBase):
             return
         missing_relations = []
         for relation in self.REQUIRED_RELATIONS:
-            rel = self.model.get_relation(relation)
-            if rel is None:
+            if not self.model.get_relation(relation):
                 missing_relations.append(relation)
         if missing_relations:
             self.unit.status = BlockedStatus(
                 'Missing relations: {}'.format(', '.join(missing_relations)))
             return
-        try:
-            # Custom checks return True if the checked passed else False.
-            # If the check failed the custom check will have set the status.
-            if not self.custom_status_check():
-                return
-        except NotImplementedError:
-            pass
         if self.state.is_started:
             self.unit.status = ActiveStatus('Unit is ready')
         else:
@@ -114,7 +116,7 @@ class OSBaseCharm(CharmBase):
         _svcs = []
         for svc in self.RESTART_MAP.values():
             _svcs.extend(svc)
-        return sorted(list(set(_svcs)))
+        return list(set(_svcs))
 
     def on_pre_series_upgrade(self, event):
         _, messages = os_utils.manage_payload_services(
