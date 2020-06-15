@@ -49,17 +49,19 @@ class OSBaseCharm(CharmBase):
 
     REQUIRED_RELATIONS = []
 
-    def __init__(self, framework, key):
-        super().__init__(framework, key)
+    def __init__(self, framework):
+        super().__init__(framework)
         self.state.set_default(is_started=False)
         self.state.set_default(is_paused=False)
         self.state.set_default(series_upgrade=False)
-        self.framework.observe(self.on.install, self)
-        self.framework.observe(self.on.update_status, self)
-        self.framework.observe(self.on.pause_action, self)
-        self.framework.observe(self.on.resume_action, self)
-        self.framework.observe(self.on.pre_series_upgrade, self)
-        self.framework.observe(self.on.post_series_upgrade, self)
+        self.framework.observe(self.on.install, self.on_install)
+        self.framework.observe(self.on.update_status, self.on_update_status)
+        self.framework.observe(self.on.pause_action, self.on_pause_action)
+        self.framework.observe(self.on.resume_action, self.on_resume_action)
+        self.framework.observe(self.on.pre_series_upgrade,
+                               self.on_pre_series_upgrade)
+        self.framework.observe(self.on.post_series_upgrade,
+                               self.on_post_series_upgrade)
 
     def install_pkgs(self):
         logging.info("Installing packages")
