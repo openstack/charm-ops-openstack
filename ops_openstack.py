@@ -2,7 +2,6 @@ from ops.charm import CharmBase
 from ops.framework import (
     StoredState,
 )
-import ops.model
 
 from charmhelpers.fetch import (
     apt_install,
@@ -15,6 +14,7 @@ from ops.model import (
     MaintenanceStatus,
     WaitingStatus,
 )
+import charmhelpers.core.hookenv as hookenv
 import charmhelpers.contrib.openstack.utils as os_utils
 import logging
 
@@ -222,13 +222,15 @@ def get_charm_instance(release=None, package_type='deb', all_releases=None,
 
 def get_charm_class_for_release():
     _origin = None
-    current_model = ops.model.ModelBackend()
-    config = current_model.config_get()
+    # There is no charm class to interact with the ops framework yet
+    # and it is now forbidden to access ops.model._Model so fallback
+    # to charmhelpers.core.hookenv
+    config = hookenv.config()
     if 'source' in config:
         _origin = config['source']
     elif 'openstack-origin' in config:
         _origin = config['openstack-origin']
-    else:
+    if not _origin:
         _origin = 'distro'
     # XXX Make this support openstack and ceph
     target_release = os_utils.get_os_codename_install_source(_origin)
