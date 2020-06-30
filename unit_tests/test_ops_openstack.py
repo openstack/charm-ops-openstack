@@ -94,24 +94,6 @@ class TestOSBaseCharm(CharmTestCase):
                 resume:
                     description: resume action
             ''')
-#        # BEGIN: Workaround until
-#        # https://github.com/canonical/operator/pull/196 lands
-#        class _TestingOPSModelBackend(_TestingModelBackend):
-#
-#            def relation_ids(self, relation_name):
-#                return self._relation_ids_map.get(relation_name, [])
-#        self.harness._backend = _TestingOPSModelBackend(
-#            self.harness._unit_name)
-#        self.harness._model = model.Model(
-#            self.harness._unit_name,
-#            self.harness._meta,
-#            self.harness._backend)
-#        self.harness._framework = framework.Framework(
-#            ":memory:",
-#            self.harness._charm_dir,
-#            self.harness._meta,
-#            self.harness._model)
-#        # END Workaround
 
     def test_init(self):
         self.harness.begin()
