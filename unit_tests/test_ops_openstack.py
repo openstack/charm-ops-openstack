@@ -26,10 +26,10 @@ from ops.model import (
     WaitingStatus,
 )
 
-import ops_openstack
+import ops_openstack.core
 
 
-class OpenStackTestAPICharm(ops_openstack.OSBaseCharm):
+class OpenStackTestAPICharm(ops_openstack.core.OSBaseCharm):
 
     PACKAGES = ['keystone-common']
     REQUIRED_RELATIONS = ['shared-db']
@@ -75,7 +75,7 @@ class TestOSBaseCharm(CharmTestCase):
         'os_utils']
 
     def setUp(self):
-        super().setUp(ops_openstack, self.PATCHES)
+        super().setUp(ops_openstack.core, self.PATCHES)
         self.os_utils.manage_payload_services = MagicMock()
         self.harness = Harness(
             OpenStackTestAPICharm,
