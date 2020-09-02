@@ -97,9 +97,9 @@ class TestOSBaseCharm(CharmTestCase):
 
     def test_init(self):
         self.harness.begin()
-        self.assertFalse(self.harness.charm.state.is_started)
-        self.assertFalse(self.harness.charm.state.is_paused)
-        self.assertFalse(self.harness.charm.state.series_upgrade)
+        self.assertFalse(self.harness.charm._stored.is_started)
+        self.assertFalse(self.harness.charm._stored.is_paused)
+        self.assertFalse(self.harness.charm._stored.series_upgrade)
 
     def test_install(self):
         print(self.harness._backend)
@@ -127,7 +127,7 @@ class TestOSBaseCharm(CharmTestCase):
     def test_update_status(self):
         self.harness.add_relation('shared-db', 'mysql')
         self.harness.begin()
-        self.harness.charm.state.is_started = True
+        self.harness.charm._stored.is_started = True
         self.harness.charm.on.update_status.emit()
         self.assertEqual(
             self.harness.charm.unit.status.message,
@@ -142,7 +142,7 @@ class TestOSBaseCharm(CharmTestCase):
                 'custom-check-fail': 'True'})
         self.harness.add_relation('shared-db', 'mysql')
         self.harness.begin()
-        self.harness.charm.state.is_started = True
+        self.harness.charm._stored.is_started = True
         self.harness.charm.on.update_status.emit()
         self.assertEqual(
             self.harness.charm.unit.status.message,
@@ -164,7 +164,7 @@ class TestOSBaseCharm(CharmTestCase):
 
     def test_update_status_series_upgrade(self):
         self.harness.begin()
-        self.harness.charm.state.series_upgrade = True
+        self.harness.charm._stored.series_upgrade = True
         self.harness.charm.on_update_status('An Event')
         self.assertEqual(
             self.harness.charm.unit.status.message,
@@ -176,7 +176,7 @@ class TestOSBaseCharm(CharmTestCase):
 
     def test_update_status_series_paused(self):
         self.harness.begin()
-        self.harness.charm.state.is_paused = True
+        self.harness.charm._stored.is_paused = True
         self.harness.charm.on.update_status.emit()
         self.assertEqual(
             self.harness.charm.unit.status.message,
@@ -204,11 +204,11 @@ class TestOSBaseCharm(CharmTestCase):
     def test_pre_series_upgrade(self):
         self.os_utils.manage_payload_services.return_value = ('a', 'b')
         self.harness.begin()
-        self.assertFalse(self.harness.charm.state.series_upgrade)
-        self.assertFalse(self.harness.charm.state.is_paused)
+        self.assertFalse(self.harness.charm._stored.series_upgrade)
+        self.assertFalse(self.harness.charm._stored.is_paused)
         self.harness.charm.on.pre_series_upgrade.emit()
-        self.assertTrue(self.harness.charm.state.series_upgrade)
-        self.assertTrue(self.harness.charm.state.is_paused)
+        self.assertTrue(self.harness.charm._stored.series_upgrade)
+        self.assertTrue(self.harness.charm._stored.is_paused)
         self.os_utils.manage_payload_services.assert_called_once_with(
             'pause',
             services=['apache2', 'ks-api'],
@@ -217,11 +217,11 @@ class TestOSBaseCharm(CharmTestCase):
     def test_post_series_upgrade(self):
         self.os_utils.manage_payload_services.return_value = ('a', 'b')
         self.harness.begin()
-        self.harness.charm.state.series_upgrade = True
-        self.harness.charm.state.is_paused = True
+        self.harness.charm._stored.series_upgrade = True
+        self.harness.charm._stored.is_paused = True
         self.harness.charm.on.post_series_upgrade.emit()
-        self.assertFalse(self.harness.charm.state.series_upgrade)
-        self.assertFalse(self.harness.charm.state.is_paused)
+        self.assertFalse(self.harness.charm._stored.series_upgrade)
+        self.assertFalse(self.harness.charm._stored.is_paused)
         self.os_utils.manage_payload_services.assert_called_once_with(
             'resume',
             services=['apache2', 'ks-api'],
@@ -230,9 +230,9 @@ class TestOSBaseCharm(CharmTestCase):
     def test_pause(self):
         self.os_utils.manage_payload_services.return_value = ('a', 'b')
         self.harness.begin()
-        self.assertFalse(self.harness.charm.state.is_paused)
+        self.assertFalse(self.harness.charm._stored.is_paused)
         self.harness.charm.on_pause_action('An Event')
-        self.assertTrue(self.harness.charm.state.is_paused)
+        self.assertTrue(self.harness.charm._stored.is_paused)
         self.os_utils.manage_payload_services.assert_called_once_with(
             'pause',
             services=['apache2', 'ks-api'],
@@ -241,9 +241,9 @@ class TestOSBaseCharm(CharmTestCase):
     def test_resume(self):
         self.os_utils.manage_payload_services.return_value = ('a', 'b')
         self.harness.begin()
-        self.harness.charm.state.is_paused = True
+        self.harness.charm._stored.is_paused = True
         self.harness.charm.on_resume_action('An Event')
-        self.assertFalse(self.harness.charm.state.is_paused)
+        self.assertFalse(self.harness.charm._stored.is_paused)
         self.os_utils.manage_payload_services.assert_called_once_with(
             'resume',
             services=['apache2', 'ks-api'],

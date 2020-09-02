@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 class OSBaseCharm(CharmBase):
-    state = StoredState()
+    _stored = StoredState()
 
     PACKAGES = []
 
@@ -51,9 +51,9 @@ class OSBaseCharm(CharmBase):
 
     def __init__(self, framework):
         super().__init__(framework)
-        self.state.set_default(is_started=False)
-        self.state.set_default(is_paused=False)
-        self.state.set_default(series_upgrade=False)
+        self._stored.set_default(is_started=False)
+        self._stored.set_default(is_paused=False)
+        self._stored.set_default(series_upgrade=False)
         self.framework.observe(self.on.install, self.on_install)
         self.framework.observe(self.on.update_status, self.on_update_status)
         self.framework.observe(self.on.pause_action, self.on_pause_action)
@@ -88,12 +88,12 @@ class OSBaseCharm(CharmBase):
                 return
         except NotImplementedError:
             pass
-        if self.state.series_upgrade:
+        if self._stored.series_upgrade:
             self.unit.status = BlockedStatus(
                 'Ready for do-release-upgrade and reboot. '
                 'Set complete when finished.')
             return
-        if self.state.is_paused:
+        if self._stored.is_paused:
             self.unit.status = MaintenanceStatus(
                 "Paused. Use 'resume' action to resume normal service.")
             return
@@ -105,7 +105,7 @@ class OSBaseCharm(CharmBase):
             self.unit.status = BlockedStatus(
                 'Missing relations: {}'.format(', '.join(missing_relations)))
             return
-        if self.state.is_started:
+        if self._stored.is_started:
             self.unit.status = ActiveStatus('Unit is ready')
         else:
             self.unit.status = WaitingStatus('Charm configuration in progress')
@@ -125,8 +125,8 @@ class OSBaseCharm(CharmBase):
             'pause',
             services=self.services(),
             charm_func=None)
-        self.state.is_paused = True
-        self.state.series_upgrade = True
+        self._stored.is_paused = True
+        self._stored.series_upgrade = True
         self.update_status()
 
     def on_post_series_upgrade(self, event):
@@ -134,8 +134,8 @@ class OSBaseCharm(CharmBase):
             'resume',
             services=self.services(),
             charm_func=None)
-        self.state.is_paused = False
-        self.state.series_upgrade = False
+        self._stored.is_paused = False
+        self._stored.series_upgrade = False
         self.update_status()
 
     def on_pause_action(self, event):
@@ -143,7 +143,7 @@ class OSBaseCharm(CharmBase):
             'pause',
             services=self.services(),
             charm_func=None)
-        self.state.is_paused = True
+        self._stored.is_paused = True
         self.update_status()
 
     def on_resume_action(self, event):
@@ -151,7 +151,7 @@ class OSBaseCharm(CharmBase):
             'resume',
             services=self.services(),
             charm_func=None)
-        self.state.is_paused = False
+        self._stored.is_paused = False
         self.update_status()
 
 
