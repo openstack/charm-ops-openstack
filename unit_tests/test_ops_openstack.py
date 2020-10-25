@@ -29,7 +29,36 @@ from ops.model import (
 import ops_openstack.core
 
 
-class OpenStackTestAPICharm(ops_openstack.core.OSBaseCharm):
+class OpenStackTestPlugin1(ops_openstack.core.OSBaseCharm):
+
+    def __init__(self, framework):
+        super().__init__(framework)
+        super().register_status_check(self.plugin1_status_check)
+
+    def plugin1_status_check(self):
+        if self.model.config.get('plugin1-check-fail', 'False') == 'True':
+            return BlockedStatus(
+                'Plugin1 Custom check failed')
+        else:
+            return ActiveStatus('Unit is ready and awesome')
+
+
+class OpenStackTestPlugin2(ops_openstack.core.OSBaseCharm):
+
+    def __init__(self, framework):
+        super().__init__(framework)
+        super().register_status_check(self.plugin2_status_check)
+
+    def plugin2_status_check(self):
+        if self.model.config.get('plugin2-check-fail', 'False') == 'True':
+            return BlockedStatus(
+                'Plugin2 Custom check failed')
+        else:
+            return ActiveStatus('Unit is ready and super')
+
+
+class OpenStackTestAPICharm(OpenStackTestPlugin1,
+                            OpenStackTestPlugin2):
 
     PACKAGES = ['keystone-common']
     REQUIRED_RELATIONS = ['shared-db']
@@ -38,13 +67,15 @@ class OpenStackTestAPICharm(ops_openstack.core.OSBaseCharm):
         '/etc/f2.conf': ['apache2', 'ks-api'],
         '/etc/f3.conf': []}
 
+    def __init__(self, framework):
+        super().__init__(framework)
+        super().register_status_check(self.custom_status_check)
+
     def custom_status_check(self):
         if self.model.config.get('custom-check-fail', 'False') == 'True':
-            self.unit.status = MaintenanceStatus(
-                'Custom check failed')
-            return False
+            return MaintenanceStatus('Custom check failed')
         else:
-            return True
+            return ActiveStatus()
 
 
 class CharmTestCase(unittest.TestCase):
@@ -131,7 +162,7 @@ class TestOSBaseCharm(CharmTestCase):
         self.harness.charm.on.update_status.emit()
         self.assertEqual(
             self.harness.charm.unit.status.message,
-            'Unit is ready')
+            'Unit is ready and super, Unit is ready and awesome')
         self.assertIsInstance(
             self.harness.charm.unit.status,
             ActiveStatus)
@@ -191,6 +222,33 @@ class TestOSBaseCharm(CharmTestCase):
         self.assertEqual(
             self.harness.charm.unit.status.message,
             'Missing relations: shared-db')
+        self.assertIsInstance(
+            self.harness.charm.unit.status,
+            BlockedStatus)
+
+    def test_update_status_plugin_check_fail(self):
+        self.harness.update_config(
+            key_values={
+                'plugin1-check-fail': 'True',
+                'plugin2-check-fail': 'False'})
+        self.harness.add_relation('shared-db', 'mysql')
+        self.harness.begin()
+        self.harness.charm._stored.is_started = True
+        self.harness.charm.on.update_status.emit()
+        self.assertEqual(
+            self.harness.charm.unit.status.message,
+            'Plugin1 Custom check failed')
+        self.assertIsInstance(
+            self.harness.charm.unit.status,
+            BlockedStatus)
+        self.harness.update_config(
+            key_values={
+                'plugin1-check-fail': 'False',
+                'plugin2-check-fail': 'True'})
+        self.harness.charm.on.update_status.emit()
+        self.assertEqual(
+            self.harness.charm.unit.status.message,
+            'Plugin2 Custom check failed')
         self.assertIsInstance(
             self.harness.charm.unit.status,
             BlockedStatus)

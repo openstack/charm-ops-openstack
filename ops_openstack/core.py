@@ -51,6 +51,7 @@ class OSBaseCharm(CharmBase):
 
     def __init__(self, framework):
         super().__init__(framework)
+        self.custom_status_checks = []
         self._stored.set_default(is_started=False)
         self._stored.set_default(is_paused=False)
         self._stored.set_default(series_upgrade=False)
@@ -79,15 +80,47 @@ class OSBaseCharm(CharmBase):
     def custom_status_check(self):
         raise NotImplementedError
 
+    def register_status_check(self, custom_check):
+        self.custom_status_checks.append(custom_check)
+
     def update_status(self):
+        """Update the charms status
+
+        A charm, or plugin, can register checks to be run when calculating the
+        charms status. Each status method should have a unique name. The custom
+        check should return a StatusBase object.  If the check returns an
+        ActiveStatus object then subsequent checks are run, if it returns
+        anything else then the charms status is set to the object the check
+        returned and no subsequent checks are run. If the check returns an
+        ActiveStatus with a specific message then this message will be
+        concatenated with the other active status messages.
+
+        Example::
+
+        class MyCharm(OSBaseCharm):
+
+            def __init__(self, framework):
+                super().__init__(framework)
+                super().register_status_check(self.mycharm_check)
+
+            def mycharm_check(self):
+                if self.model.config['plugin-check-fail'] == 'True':
+                    return BlockedStatus(
+                        'Plugin Custom check failed')
+                else:
+                    return ActiveStatus()
+
+        """
         logging.info("Updating status")
-        try:
-            # Custom checks return True if the checked passed else False.
-            # If the check failed the custom check will have set the status.
-            if not self.custom_status_check():
+        active_messages = ['Unit is ready']
+        for check in self.custom_status_checks:
+            _result = check()
+            if isinstance(_result, ActiveStatus):
+                if _result.message:
+                    active_messages.append(_result.message)
+            else:
+                self.unit.status = _result
                 return
-        except NotImplementedError:
-            pass
         if self._stored.series_upgrade:
             self.unit.status = BlockedStatus(
                 'Ready for do-release-upgrade and reboot. '
@@ -106,7 +139,16 @@ class OSBaseCharm(CharmBase):
                 'Missing relations: {}'.format(', '.join(missing_relations)))
             return
         if self._stored.is_started:
-            self.unit.status = ActiveStatus('Unit is ready')
+            _unique = []
+            # Reverse sort the list so that a shorter message that has the same
+            # start as a longer message comes first and can then be omitted.
+            # eg 'Unit is ready' comes after 'Unit is ready and clustered'
+            # and 'Unit is ready' is dropped.
+            for msg in sorted(list(set(active_messages)), reverse=True):
+                dupes = [m for m in _unique if m.startswith(msg)]
+                if not dupes:
+                    _unique.append(msg)
+            self.unit.status = ActiveStatus(', '.join(_unique))
         else:
             self.unit.status = WaitingStatus('Charm configuration in progress')
         logging.info("Status updated")
