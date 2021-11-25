@@ -124,6 +124,29 @@ class TestOSBaseCharm(CharmTestCase):
                     description: pause action
                 resume:
                     description: resume action
+            ''',
+            config='''
+                options:
+                    source:
+                        type: string
+                        default:
+                        description: a PPA
+                    key:
+                        type: string
+                        default:
+                        description: a key
+                    custom-check-fail:
+                        type: bool
+                        default: False
+                        description: a failure to report in the unit status
+                    plugin1-check-fail:
+                        type: bool
+                        default: False
+                        description: another failure to report
+                    plugin2-check-fail:
+                        type: bool
+                        default: False
+                        description: yet another failure to report
             ''')
 
     def test_init(self):
