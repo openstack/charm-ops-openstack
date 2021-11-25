@@ -148,15 +148,18 @@ class OSBaseCharm(CharmBase):
             else:
                 self.unit.status = _result
                 return
+
         if self._stored.series_upgrade:
             self.unit.status = BlockedStatus(
                 'Ready for do-release-upgrade and reboot. '
                 'Set complete when finished.')
             return
+
         if self._stored.is_paused:
             self.unit.status = MaintenanceStatus(
                 "Paused. Use 'resume' action to resume normal service.")
             return
+
         missing_relations = []
         for relation in self.REQUIRED_RELATIONS:
             if not self.model.get_relation(relation):
@@ -165,6 +168,13 @@ class OSBaseCharm(CharmBase):
             self.unit.status = BlockedStatus(
                 'Missing relations: {}'.format(', '.join(missing_relations)))
             return
+
+        _, services_not_running_msg = os_utils._ows_check_services_running(
+            self.services(), ports=[])
+        if services_not_running_msg is not None:
+            self.unit.status = BlockedStatus(services_not_running_msg)
+            return
+
         if self._stored.is_started:
             _unique = []
             # Reverse sort the list so that a shorter message that has the same
@@ -178,6 +188,7 @@ class OSBaseCharm(CharmBase):
             self.unit.status = ActiveStatus(', '.join(_unique))
         else:
             self.unit.status = WaitingStatus('Charm configuration in progress')
+
         logging.info("Status updated")
 
     def on_update_status(self, event):

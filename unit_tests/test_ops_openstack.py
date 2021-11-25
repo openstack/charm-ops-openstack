@@ -108,6 +108,7 @@ class TestOSBaseCharm(CharmTestCase):
     def setUp(self):
         super().setUp(ops_openstack.core, self.PATCHES)
         self.os_utils.manage_payload_services = MagicMock()
+        self.os_utils._ows_check_services_running = MagicMock()
         self.harness = Harness(
             OpenStackTestAPICharm,
             meta='''
@@ -156,6 +157,7 @@ class TestOSBaseCharm(CharmTestCase):
             fatal=True)
 
     def test_update_status(self):
+        self.os_utils._ows_check_services_running.return_value = (None, None)
         self.harness.add_relation('shared-db', 'mysql')
         self.harness.begin()
         self.harness.charm._stored.is_started = True
@@ -168,6 +170,7 @@ class TestOSBaseCharm(CharmTestCase):
             ActiveStatus)
 
     def test_update_status_custom_check_fail(self):
+        self.os_utils._ows_check_services_running.return_value = (None, None)
         self.harness.update_config(
             key_values={
                 'custom-check-fail': 'True'})
@@ -183,6 +186,7 @@ class TestOSBaseCharm(CharmTestCase):
             MaintenanceStatus)
 
     def test_update_status_not_started(self):
+        self.os_utils._ows_check_services_running.return_value = (None, None)
         self.harness.add_relation('shared-db', 'mysql')
         self.harness.begin()
         self.harness.charm.on.update_status.emit()
@@ -194,6 +198,7 @@ class TestOSBaseCharm(CharmTestCase):
             WaitingStatus)
 
     def test_update_status_series_upgrade(self):
+        self.os_utils._ows_check_services_running.return_value = (None, None)
         self.harness.begin()
         self.harness.charm._stored.series_upgrade = True
         self.harness.charm.on_update_status('An Event')
@@ -206,6 +211,7 @@ class TestOSBaseCharm(CharmTestCase):
             BlockedStatus)
 
     def test_update_status_series_paused(self):
+        self.os_utils._ows_check_services_running.return_value = (None, None)
         self.harness.begin()
         self.harness.charm._stored.is_paused = True
         self.harness.charm.on.update_status.emit()
@@ -217,6 +223,7 @@ class TestOSBaseCharm(CharmTestCase):
             MaintenanceStatus)
 
     def test_update_status_missing_relation(self):
+        self.os_utils._ows_check_services_running.return_value = (None, None)
         self.harness.begin()
         self.harness.charm.on.update_status.emit()
         self.assertEqual(
@@ -227,6 +234,7 @@ class TestOSBaseCharm(CharmTestCase):
             BlockedStatus)
 
     def test_update_status_plugin_check_fail(self):
+        self.os_utils._ows_check_services_running.return_value = (None, None)
         self.harness.update_config(
             key_values={
                 'plugin1-check-fail': 'True',
@@ -252,6 +260,21 @@ class TestOSBaseCharm(CharmTestCase):
         self.assertIsInstance(
             self.harness.charm.unit.status,
             BlockedStatus)
+
+    def test_update_status_service_not_running(self):
+        self.os_utils._ows_check_services_running.return_value = (
+            'blocked', 'apache2 is not running')
+        self.harness.add_relation('shared-db', 'mysql')
+        self.harness.begin()
+        self.harness.charm.on.update_status.emit()
+        self.assertEqual(
+            self.harness.charm.unit.status.message,
+            'apache2 is not running')
+        self.assertIsInstance(
+            self.harness.charm.unit.status,
+            BlockedStatus)
+        self.os_utils._ows_check_services_running.assert_called_once_with(
+            ['apache2', 'ks-api'], ports=[])
 
     def test_services(self):
         self.harness.begin()
