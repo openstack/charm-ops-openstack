@@ -124,31 +124,45 @@ class OpenStackRelationAdapters(Object):
     mro() for the class.
     """
 
-    def __init__(self, relations, charm_instance, options_instance=None):
+    def __init__(self, relations, charm_instance, contexts=None, options_instance=None):
         """
         :param relations: List of instances of relation classes
+        :param contexts: List of contexts
         :param options: Configuration class to use (DEPRECATED)
         :param options_instance: Instance of Configuration class to use
         :param charm_instance: optional charm_instance that is captured as a
             weakref for use on the adapter.
         """
+        if contexts is None:
+            contexts = ()
         self.charm_instance = charm_instance
         self._relations = set()
+        self._contexts = set()
         self._adapters = {}
         for cls in reversed(self.__class__.mro()):
             self._adapters.update(
                 {k.replace('-', '_'): v
                  for k, v in getattr(cls, 'relation_adapters', {}).items()})
         self.add_relations(relations)
+        for context in contexts:
+            self.add_context(context)
         self.options = ConfigurationAdapter(charm_instance)
         self._relations.add('options')
 
     def __iter__(self):
         """
-        Iterate over the relations presented to the charm.
+        Iterate over the relations and contexts presented to the charm.
         """
-        for relation in self._relations:
-            yield relation, getattr(self, relation)
+        for ref in self._relations.union(self._contexts):
+            yield ref, getattr(self, ref)
+
+    def add_context(self, context):
+        """Add the context to this adapters instance.
+
+        :param relation: a RAW context
+        """
+        setattr(self, context.name, context)
+        self._contexts.add(context.name)
 
     def add_relations(self, relations):
         """Add the relations to this adapters instance for use as a context.
