@@ -103,3 +103,50 @@ class TestBaseCephClientCharm(CharmTestCase):
         self.assertIsInstance(
             self.harness.charm.unit.status,
             BlockedStatus)
+
+
+class CinderCharm(ops_openstack.plugins.classes.CinderStoragePluginCharm):
+
+    def cinder_configuration(self, cinder_config):
+        return [('volume_driver', 'my-driver'),
+                ('some-config', 'some-value')]
+
+
+class TestBaseCinderCharm(unittest.TestCase):
+
+    def setUp(self):
+        self.harness = Harness(
+            CinderCharm,
+            meta='''
+            name: cinder-test
+            provides:
+                storage-backend:
+                    interface: cinder-backend
+                    scope: container
+            requires:
+                juju-info:
+                    interface: juju-info
+                    scope: container
+            ''',
+            config='''
+            options:
+                volume-backend-name:
+                    default: ""
+                    type: string
+            '''
+        )
+        self.addCleanup(self.harness.cleanup)
+        self.harness.begin()
+        self.harness.set_leader(True)
+        backend = self.harness.add_relation('storage-backend', 'cinder')
+        self.harness.update_config({'volume-backend-name': 'test'})
+        self.harness.add_relation_unit(backend, 'cinder/0')
+
+    def test_cinder_base(self):
+        self.assertEqual(self.harness.framework.model.app.name, 'cinder-test')
+        self.harness.update_config({})
+        self.assertTrue(isinstance(self.harness.model.unit.status,
+                                   ActiveStatus))
+        config = self.harness.charm.cinder_configuration({})
+        self.assertTrue(config[0], ('volume_driver', 'my-driver'))
+        self.assertTrue(config[1], ('some-config', 'some-value'))
