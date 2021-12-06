@@ -15,6 +15,11 @@
 import json
 
 import ops_openstack.core
+from charmhelpers.fetch import (
+    apt_install,
+    apt_update,
+    add_source
+)
 # ch_context needed for bluestore validation
 import charmhelpers.contrib.openstack.context as ch_context
 from ops.model import (
@@ -89,6 +94,14 @@ class CinderStoragePluginCharm(ops_openstack.core.OSBaseCharm):
         for relation in self.framework.model.relations.get('storage-backend'):
             self.set_data(relation.data[self.unit], config, app_name)
         self.unit.status = ActiveStatus('Unit is ready')
+
+    def on_install(self, _):
+        source = self.model.config.get('driver-source')
+        if source:
+            add_source(source, self.model.config.get('driver-key'))
+        apt_update(fatal=True)
+        apt_install(self.PACKAGES, fatal=True)
+        self.update_status()
 
     def on_storage_backend(self, event):
         self.set_data(
