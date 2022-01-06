@@ -69,7 +69,7 @@ class CinderStoragePluginCharm(ops_openstack.core.OSBaseCharm):
     def render_config(self, config, app_name):
         return json.dumps({
             "cinder": {
-                "/etc/cinder/cinder.confg": {
+                "/etc/cinder/cinder.conf": {
                     "sections": {app_name: self.cinder_configuration(config)}
                 }
             }
