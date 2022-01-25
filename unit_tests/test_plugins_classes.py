@@ -127,19 +127,12 @@ class TestBaseCinderCharm(unittest.TestCase):
                 juju-info:
                     interface: juju-info
                     scope: container
-            ''',
-            config='''
-            options:
-                volume-backend-name:
-                    default: ""
-                    type: string
             '''
         )
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.harness.set_leader(True)
         backend = self.harness.add_relation('storage-backend', 'cinder')
-        self.harness.update_config({'volume-backend-name': 'test'})
         self.harness.add_relation_unit(backend, 'cinder/0')
 
     def test_cinder_base(self):

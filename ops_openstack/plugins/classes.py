@@ -77,7 +77,7 @@ class CinderStoragePluginCharm(ops_openstack.core.OSBaseCharm):
 
     def set_data(self, data, config, app_name):
         """Inform another charm of the backend name and configuration."""
-        data['backend_name'] = config['volume-backend-name'] or app_name
+        data['backend_name'] = app_name
         data['stateless'] = str(self.stateless)
         data['active_active'] = str(self.active_active)
         data['subordinate_configuration'] = self.render_config(
