@@ -64,6 +64,8 @@ class OSBaseCharm(CharmBase):
 
     REQUIRED_RELATIONS = []
 
+    MANDATORY_CONFIG = []
+
     def __init__(self, framework):
         super().__init__(framework)
         self.custom_status_checks = []
@@ -72,6 +74,7 @@ class OSBaseCharm(CharmBase):
         self._stored.set_default(series_upgrade=False)
         self.framework.observe(self.on.install, self.on_install)
         self.framework.observe(self.on.update_status, self.on_update_status)
+        self.framework.observe(self.on.config_changed, self._on_config)
         # A charm may not have pause/resume actions if it does not manage a
         # daemon.
         try:
@@ -233,6 +236,22 @@ class OSBaseCharm(CharmBase):
             charm_func=None)
         self._stored.is_paused = False
         self.update_status()
+
+    def on_config(self, event):
+        """Main entry point for configuration changes."""
+        pass
+
+    def _on_config(self, event):
+        missing = []
+        config = self.framework.model.config
+        for param in self.MANDATORY_CONFIG:
+            if param not in config:
+                missing.append(param)
+        if missing:
+            self.unit.status = BlockedStatus(
+                'Missing option(s): ' + ','.join(missing))
+            return
+        self.on_config(event)
 
 
 def charm_class(cls):
