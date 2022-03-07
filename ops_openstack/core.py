@@ -48,6 +48,9 @@ UCA_CODENAME_MAP = {
     'train': 'nautilus',
     'ussuri': 'octopus',
     'victoria': 'octopus',
+    'wallaby': 'pacific',
+    'xena': 'pacific',
+    'yoga': 'quincy',
 }
 
 
