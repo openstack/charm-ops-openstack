@@ -77,6 +77,9 @@ class OpenStackTestAPICharm(OpenStackTestPlugin1,
         else:
             return ActiveStatus()
 
+    def on_config(self, _):
+        self.unit.status = ActiveStatus()
+
 
 class CharmTestCase(unittest.TestCase):
 
@@ -149,6 +152,9 @@ class TestOSBaseCharm(CharmTestCase):
                         default: False
                         description: yet another failure to report
             ''')
+
+    def tearDown(self):
+        OpenStackTestAPICharm.MANDATORY_CONFIG = []
 
     def test_init(self):
         self.harness.begin()
@@ -352,3 +358,13 @@ class TestOSBaseCharm(CharmTestCase):
             'resume',
             services=['apache2', 'ks-api'],
             charm_func=None)
+
+    def test_mandatory_config(self):
+        OpenStackTestAPICharm.MANDATORY_CONFIG = ['source']
+        self.harness.begin()
+        self.harness.update_config({})
+        self.assertTrue(
+            isinstance(self.harness.charm.unit.status, BlockedStatus))
+        self.harness.update_config({'source': 'value'})
+        self.assertTrue(
+            isinstance(self.harness.charm.unit.status, ActiveStatus))
