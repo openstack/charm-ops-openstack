@@ -61,7 +61,6 @@ class CinderStoragePluginCharm(ops_openstack.core.OSBaseCharm):
 
     def __init__(self, framework):
         super().__init__(framework)
-        self.framework.observe(self.on.config_changed, self.on_config)
         self.framework.observe(
             self.on.storage_backend_relation_changed,
             self.on_storage_backend)
