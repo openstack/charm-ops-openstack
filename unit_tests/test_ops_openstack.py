@@ -36,7 +36,7 @@ class OpenStackTestPlugin1(ops_openstack.core.OSBaseCharm):
         super().register_status_check(self.plugin1_status_check)
 
     def plugin1_status_check(self):
-        if self.model.config.get('plugin1-check-fail', 'False') == 'True':
+        if self.model.config.get('plugin1-check-fail', False):
             return BlockedStatus(
                 'Plugin1 Custom check failed')
         else:
@@ -50,7 +50,7 @@ class OpenStackTestPlugin2(ops_openstack.core.OSBaseCharm):
         super().register_status_check(self.plugin2_status_check)
 
     def plugin2_status_check(self):
-        if self.model.config.get('plugin2-check-fail', 'False') == 'True':
+        if self.model.config.get('plugin2-check-fail', False):
             return BlockedStatus(
                 'Plugin2 Custom check failed')
         else:
@@ -72,7 +72,7 @@ class OpenStackTestAPICharm(OpenStackTestPlugin1,
         super().register_status_check(self.custom_status_check)
 
     def custom_status_check(self):
-        if self.model.config.get('custom-check-fail', 'False') == 'True':
+        if self.model.config.get('custom-check-fail', False):
             return MaintenanceStatus('Custom check failed')
         else:
             return ActiveStatus()
@@ -140,15 +140,15 @@ class TestOSBaseCharm(CharmTestCase):
                         default:
                         description: a key
                     custom-check-fail:
-                        type: bool
+                        type: boolean
                         default: False
                         description: a failure to report in the unit status
                     plugin1-check-fail:
-                        type: bool
+                        type: boolean
                         default: False
                         description: another failure to report
                     plugin2-check-fail:
-                        type: bool
+                        type: boolean
                         default: False
                         description: yet another failure to report
             ''')
@@ -202,7 +202,7 @@ class TestOSBaseCharm(CharmTestCase):
         self.os_utils.ows_check_services_running.return_value = (None, None)
         self.harness.update_config(
             key_values={
-                'custom-check-fail': 'True'})
+                'custom-check-fail': True})
         self.harness.add_relation('shared-db', 'mysql')
         self.harness.begin()
         self.harness.charm._stored.is_started = True
@@ -266,8 +266,8 @@ class TestOSBaseCharm(CharmTestCase):
         self.os_utils.ows_check_services_running.return_value = (None, None)
         self.harness.update_config(
             key_values={
-                'plugin1-check-fail': 'True',
-                'plugin2-check-fail': 'False'})
+                'plugin1-check-fail': True,
+                'plugin2-check-fail': False})
         self.harness.add_relation('shared-db', 'mysql')
         self.harness.begin()
         self.harness.charm._stored.is_started = True
@@ -280,8 +280,8 @@ class TestOSBaseCharm(CharmTestCase):
             BlockedStatus)
         self.harness.update_config(
             key_values={
-                'plugin1-check-fail': 'False',
-                'plugin2-check-fail': 'True'})
+                'plugin1-check-fail': False,
+                'plugin2-check-fail': True})
         self.harness.charm.on.update_status.emit()
         self.assertEqual(
             self.harness.charm.unit.status.message,
