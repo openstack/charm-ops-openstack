@@ -15,6 +15,8 @@
 """Adapter classes and utilities for use with Reactive interfaces"""
 from __future__ import absolute_import
 
+import weakref
+
 from ops.framework import Object
 
 
@@ -94,6 +96,7 @@ class ConfigurationAdapter(object):
         :param charm_instance: the instance of the OpenStackCharm derived
             class.
         """
+        self.charm_instance = weakref.proxy(charm_instance)
         for k, v in charm_instance.framework.model.config.items():
             k = k.replace('-', '_')
             setattr(self, k, v)
