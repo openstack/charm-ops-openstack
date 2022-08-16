@@ -51,6 +51,7 @@ UCA_CODENAME_MAP = {
     'wallaby': 'pacific',
     'xena': 'pacific',
     'yoga': 'quincy',
+    'zed': 'quincy',
 }
 
 
