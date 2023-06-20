@@ -52,6 +52,7 @@ UCA_CODENAME_MAP = {
     'xena': 'pacific',
     'yoga': 'quincy',
     'zed': 'quincy',
+    'antelope': 'quincy',
 }
 
 
