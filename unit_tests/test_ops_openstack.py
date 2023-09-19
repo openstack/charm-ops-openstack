@@ -303,13 +303,13 @@ class TestOSBaseCharm(CharmTestCase):
             self.harness.charm.unit.status,
             BlockedStatus)
         self.os_utils.ows_check_services_running.assert_called_once_with(
-            ['apache2', 'ks-api'], ports=[])
+            self.harness.charm.services(), ports=[])
 
     def test_services(self):
         self.harness.begin()
         self.assertEqual(
-            self.harness.charm.services(),
-            ['apache2', 'ks-api'])
+            set(self.harness.charm.services()),
+            set(['apache2', 'ks-api']))
 
     def test_pre_series_upgrade(self):
         self.os_utils.manage_payload_services.return_value = ('a', 'b')
@@ -321,7 +321,7 @@ class TestOSBaseCharm(CharmTestCase):
         self.assertTrue(self.harness.charm._stored.is_paused)
         self.os_utils.manage_payload_services.assert_called_once_with(
             'pause',
-            services=['apache2', 'ks-api'],
+            services=self.harness.charm.services(),
             charm_func=None)
 
     def test_post_series_upgrade(self):
@@ -334,7 +334,7 @@ class TestOSBaseCharm(CharmTestCase):
         self.assertFalse(self.harness.charm._stored.is_paused)
         self.os_utils.manage_payload_services.assert_called_once_with(
             'resume',
-            services=['apache2', 'ks-api'],
+            services=self.harness.charm.services(),
             charm_func=None)
 
     def test_pause(self):
@@ -345,7 +345,7 @@ class TestOSBaseCharm(CharmTestCase):
         self.assertTrue(self.harness.charm._stored.is_paused)
         self.os_utils.manage_payload_services.assert_called_once_with(
             'pause',
-            services=['apache2', 'ks-api'],
+            services=self.harness.charm.services(),
             charm_func=None)
 
     def test_resume(self):
@@ -356,7 +356,7 @@ class TestOSBaseCharm(CharmTestCase):
         self.assertFalse(self.harness.charm._stored.is_paused)
         self.os_utils.manage_payload_services.assert_called_once_with(
             'resume',
-            services=['apache2', 'ks-api'],
+            services=self.harness.charm.services(),
             charm_func=None)
 
     def test_mandatory_config(self):
