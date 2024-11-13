@@ -55,6 +55,8 @@ UCA_CODENAME_MAP = {
     'antelope': 'quincy',
     'bobcat': 'reef',
     'caracal': 'squid',
+    'dalmatian': 'squid',
+    'epoxy': 'squid',
 }
 
 
